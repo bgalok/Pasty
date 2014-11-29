@@ -74,6 +74,9 @@ public class Pasty {
 	// new tab action
 	private Action newTabAction = null;
 	private static final KeyStroke newTabKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_T, Event.META_MASK);
+	private Action renameTabAction = null;
+	private static final KeyStroke renameTabKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_R, Event.META_MASK);
+
 	
 	public Pasty() {
 		configureFrame(mainFrame);
@@ -101,6 +104,7 @@ public class Pasty {
 	    configureUndoRedoActions(aTextPane);
 		configureTabsToSpacesAction(aTextPane);
 		configureNewTabAction(aTextPane);
+		configureRenameTabAction(aTextPane);
 	}
 	
 	private JTextPane createNewJTextPane() {
@@ -125,7 +129,11 @@ public class Pasty {
 		tabPane.setSelectedComponent(currentScrollPane);
 		currentTextPane.requestFocus();
 	}
-	
+
+	void handleRenameTabRequest(String newTabName, int selectedIndex) {
+		tabPane.setTitleAt(selectedIndex, newTabName);
+	}
+
 	private JScrollPane createNewScrollPaneWithEditor(JTextPane aTextPane) {
 		JScrollPane aScrollPane = new JScrollPane();
 		aScrollPane.getViewport().add(aTextPane);
@@ -143,6 +151,12 @@ public class Pasty {
 		newTabAction = new NewTabAction(this, textPane, "New Tab", newTabKeystroke.getKeyCode());
 		textPane.getInputMap().put(newTabKeystroke, "newTabKeystroke");
 		textPane.getActionMap().put("newTabKeystroke", newTabAction);
+	}
+
+	private void configureRenameTabAction(JTextPane textPane) {
+		renameTabAction = new RenameTabAction(this, textPane, "Rename a Tab", renameTabKeystroke.getKeyCode());
+		textPane.getInputMap().put(renameTabKeystroke, "renameTabKeystroke");
+		textPane.getActionMap().put("renameTabKeystroke", renameTabAction);
 	}
 
 	private void configureUndoRedoActions(JTextPane textPane) {
@@ -222,9 +236,17 @@ public class Pasty {
 	    editMenu.add(redoMenuItem);
 	    editMenu.add(tabsToSpacesMenuItem);
 
+	    // tabs
+	    JMenu tabsMenu = new JMenu("Tabs");
+	    JMenuItem newTabMenuItem = new JMenuItem(newTabAction);
+	    JMenuItem renameTabMenuItem = new JMenuItem(renameTabAction);
+	    tabsMenu.add(newTabMenuItem);
+	    tabsMenu.add(renameTabMenuItem);
+
 	    // add the menus to the menubar
 	    menuBar.add(fileMenu);
 	    menuBar.add(editMenu);
+	    menuBar.add(tabsMenu);
 
 	    return menuBar;
 	  }
@@ -388,11 +410,7 @@ public class Pasty {
 	}
 	
 	
-	/**
-	 * Convert tabs to spaces
-	 */
-	class NewTabAction extends AbstractAction
-	{
+	class NewTabAction extends AbstractAction {
 		JTextPane tp;
 		Pasty controller;
 		public NewTabAction(final Pasty controller, final JTextPane tp, String name, Integer mnemonic) {
@@ -413,6 +431,27 @@ public class Pasty {
 		}
 	}	
 	
+	
+	class RenameTabAction extends AbstractAction {
+		JTextPane tp;
+		Pasty controller;
+		public RenameTabAction(final Pasty controller, final JTextPane tp, String name, Integer mnemonic) {
+			super(name, null);
+			putValue(MNEMONIC_KEY, mnemonic);
+			this.controller = controller;
+			this.tp = tp;
+		}
+		public void actionPerformed(ActionEvent e) {
+			int tabIndex = tabPane.getSelectedIndex();
+			String oldName = tabPane.getTitleAt(tabIndex);
+			String tabName = JOptionPane.showInputDialog(mainFrame, "New name for the tab:");
+			if (tabName == null && tabName.trim().equals("")) {
+				// do nothing
+			} else {
+				controller.handleRenameTabRequest(tabName, tabIndex);
+			}
+		}
+	}	
 	
 	/**
 	 * Convert tabs to spaces
