@@ -56,6 +56,11 @@ public class Pasty {
 	private static final KeyStroke undoKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_Z, Event.META_MASK);
 	private static final KeyStroke redoKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_Y, Event.META_MASK);	
 	
+	// tabs to spaces
+	private Action tabsToSpacesAction = null;
+	private static final KeyStroke tabsToSpacesKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_T, Event.META_MASK);
+
+	
 	public Pasty() {
 		configureFrame(f);
 		configureTextArea(scrollPane);
@@ -65,11 +70,17 @@ public class Pasty {
 		configureFontSizeControls();
 	    configureUndoRedoActions();
 		configureQuitHandler();
-		
-		f.setJMenuBar(createMenuBar());
-		
+		configureTabsToSpacesAction();
+
+	    f.setJMenuBar(createMenuBar());
 		f.getContentPane().add(scrollPane, java.awt.BorderLayout.CENTER);
 		makeFrameVisible(f);
+	}
+
+	private void configureTabsToSpacesAction() {
+		tabsToSpacesAction = new TabsToSpacesAction(this, "Tabs -> Spaces", tabsToSpacesKeystroke.getKeyCode());
+	    tp.getInputMap().put(tabsToSpacesKeystroke, "tabsToSpacesKeystroke");
+	    tp.getActionMap().put("tabsToSpacesKeystroke", tabsToSpacesAction);
 	}
 
 	private void configureUndoRedoActions() {
@@ -96,8 +107,10 @@ public class Pasty {
 	    JMenu editMenu = new JMenu("Edit");
 	    JMenuItem undoMenuItem = new JMenuItem(undoAction);
 	    JMenuItem redoMenuItem = new JMenuItem(redoAction);
+	    JMenuItem tabsToSpacesMenuItem = new JMenuItem(tabsToSpacesAction);
 	    editMenu.add(undoMenuItem);
 	    editMenu.add(redoMenuItem);
+	    editMenu.add(tabsToSpacesMenuItem);
 
 	    // add the menus to the menubar
 	    menuBar.add(fileMenu);
@@ -138,6 +151,7 @@ public class Pasty {
 		tp.setFont(new Font("Monaco", Font.PLAIN, 13));
 		tp.setMargin(new Insets(20, 20, 20, 20));
 		tp.setBackground(new Color(218, 235, 218));
+		tp.setBackground(new Color(245, 245, 245));
 		tp.setPreferredSize(new Dimension(700, 800));
 		scrollPane.getViewport().add(tp);
 		scrollPane.getViewport().setPreferredSize(tp.getPreferredSize());
@@ -307,7 +321,27 @@ public class Pasty {
 			}
 		});
 	}
-
+	
+	
+	/**
+	 * Convert tabs to spaces
+	 */
+	public class TabsToSpacesAction extends AbstractAction
+	{
+		public TabsToSpacesAction(Pasty controller, String name, Integer mnemonic) {
+			super(name, null);
+			putValue(MNEMONIC_KEY, mnemonic);
+		}
+		public void actionPerformed(ActionEvent e)
+		{
+			String text = tp.getText();
+			String newText = text.replaceAll("\t", "    ");
+			tp.setText(newText);
+		}
+	}	
+	
+	
+	
 	  // /////////// handle undo and redo actions //////////////////
 
 	  class UndoHandler implements UndoableEditListener
