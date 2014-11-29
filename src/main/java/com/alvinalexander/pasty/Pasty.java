@@ -93,10 +93,7 @@ public class Pasty {
 		scrollPanes.add(currentScrollPane);
 		tabPane.add(currentScrollPane, "main");
 		
-		//addAllListenersToTextArea(currentTextPane);
-
-		// TODO re-enable when going live
-		//configureQuitHandler();
+		configureQuitHandler();
 
 	    mainFrame.setJMenuBar(createMenuBar());
 		mainFrame.getContentPane().add(tabPane, java.awt.BorderLayout.CENTER);

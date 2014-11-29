@@ -26,6 +26,6 @@ sh _addHiResKeyToPlistFile.sh
 # RUN
 # ---
 
-open deploy/release/Pasty.app
+open deploy/release/Scratchpad.app
 
 

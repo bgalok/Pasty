@@ -1,4 +1,4 @@
 #!/bin/sh
 
-open deploy/release/Pasty.app
+open deploy/release/Scratchpad.app
 

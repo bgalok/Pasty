@@ -1,4 +1,4 @@
-<project name="Pasty" default="create-bundle" basedir=".">
+<project name="Scratchpad" default="create-bundle" basedir=".">
 
   <property name="projectName"        value="pasty" />
   <property name="src.dir"            value="../src" />
@@ -26,7 +26,7 @@
       <mkdir dir="${release.dir}"/>
       <mkdir dir="${classes.dir}"/>
       <!-- remove the old version of the app -->
-      <delete dir="${release.dir}/Pasty.app" />
+      <delete dir="${release.dir}/Scratchpad.app" />
   </target>
 
   <target name="compile" depends="clean">
@@ -49,8 +49,8 @@
   <!-- CREATE MAC BUNDLE (new for Java7+) -->
   <target name="create-bundle" depends="make_jar">
   <bundleapp outputdirectory="${release.dir}"
-      name="Pasty"
-      displayname="Pasty"
+      name="Scratchpad"
+      displayname="Scratchpad"
       identifier="com.alvinalexander.pasty.Pasty"
       shortversion="0.1"
       icon="Pasty.icns"
