@@ -33,17 +33,7 @@ public class Pasty {
 	Application thisApp = Application.getApplication();
 			
 	JFrame mainFrame = new JFrame("Scratchpad");
-//	private JTextPane tp;
-//	private Document document;
 	
-	// "current" things
-	private Document currentDocument;
-	private JScrollPane currentScrollPane;
-	private JTextPane currentTextPane;
-	private List<JTextPane> textPanes = new ArrayList<JTextPane>();
-	private List<JScrollPane> scrollPanes = new ArrayList<JScrollPane>();
-	
-	private final JScrollPane scrollPane = new JScrollPane();
 	private final JTabbedPane tabPane = new JTabbedPane();
 	private static final int TAB_KEY = 9;
 	private static final String TAB_AS_SPACES = "   ";
@@ -69,7 +59,7 @@ public class Pasty {
 	
 	// tabs to spaces
 	private Action tabsToSpacesAction = null;
-	private static final KeyStroke tabsToSpacesKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_A, Event.META_MASK);
+	private static final KeyStroke tabsToSpacesKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_B, Event.META_MASK);
 
 	// new tab action
 	private Action newTabAction = null;
@@ -87,11 +77,9 @@ public class Pasty {
 	public Pasty() {
 		configureFrame(mainFrame);
 		
-		currentTextPane = createNewJTextPane();
-		currentScrollPane = createNewScrollPaneWithEditor(currentTextPane);
-		textPanes.add(currentTextPane);
-		scrollPanes.add(currentScrollPane);
-		tabPane.add(currentScrollPane, "main");
+		JTextPane tp = createNewJTextPane();
+		JScrollPane sp = createNewScrollPaneWithEditor(tp);
+		tabPane.add(sp, "main");
 		
 		configureQuitHandler();
 
@@ -127,13 +115,9 @@ public class Pasty {
 	void handleNewTabRequest(String tabName) {
 		JTextPane newTextPane = createNewJTextPane();
 		JScrollPane newScrollPane = createNewScrollPaneWithEditor(newTextPane);
-		currentTextPane = newTextPane;
-		currentScrollPane = newScrollPane;
-		textPanes.add(currentTextPane);
-		scrollPanes.add(currentScrollPane);
-		tabPane.add(currentScrollPane, tabName);
-		tabPane.setSelectedComponent(currentScrollPane);
-		currentTextPane.requestFocus();
+		tabPane.add(newScrollPane, tabName);
+		tabPane.setSelectedComponent(newScrollPane);
+		newTextPane.requestFocus();
 	}
 
 	void handleRenameTabRequest(String newTabName, int selectedIndex) {
