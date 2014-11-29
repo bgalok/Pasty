@@ -432,7 +432,13 @@ public class Pasty {
 	public static void main(String[] args) {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
-				new Pasty();
+				try {
+					new Pasty();
+				} catch (Throwable t) {
+					// this might help keep the app alive in the event of something bad,
+					// which will hopefully give me enough time to copy what i have in
+					// the text areas.
+				}
 			}
 		});
 	}
