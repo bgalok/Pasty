@@ -12,13 +12,20 @@ import java.awt.Event;
 import java.awt.Font;
 import java.awt.Insets;
 import java.awt.event.KeyEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 
 import javax.swing.text.Element;
 
+import com.apple.eawt.AppEvent.QuitEvent;
+import com.apple.eawt.Application;
+import com.apple.eawt.QuitHandler;
+import com.apple.eawt.QuitResponse;
+
 public class Pasty {
 
+	// mac stuff
+	Application thisApp = Application.getApplication();
+			
+	JFrame f = new JFrame("Pasty");
 	private JTextPane tp;
 	private Document document;
 	private final JScrollPane scrollPane = new JScrollPane();
@@ -36,12 +43,7 @@ public class Pasty {
 	private static final KeyStroke largerFontSizeKeystroke2 = KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, Event.META_MASK + Event.SHIFT_MASK);
 	private static final KeyStroke largerFontSizeKeystroke3 = KeyStroke.getKeyStroke(KeyEvent.VK_PLUS, Event.META_MASK);
 
-	// quit handler
-	private Action quitAction;
-	private static final KeyStroke quitKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_Q, Event.META_MASK);
-	
 	public Pasty() {
-		JFrame f = new JFrame("Pasty");
 		configureFrame(f);
 		configureTextArea(scrollPane);
 
@@ -49,21 +51,24 @@ public class Pasty {
 		addCaretListenerToTextArea();
 		configureFontSizeControls();
 		configureQuitHandler();
-
-		f.addWindowListener(new WindowAdapter() {
-			  public void windowClosing(WindowEvent we) {
-				  doExitAction();
-			  }
-	    });
 		
 		f.getContentPane().add(scrollPane, java.awt.BorderLayout.CENTER);
 		makeFrameVisible(f);
 	}
 
+	// this is mac-specific
 	private void configureQuitHandler() {
-		quitAction = new CloseFileAction(this, "Quit", null);
-		tp.getInputMap().put(quitKeystroke, "quitKeystroke");
-		tp.getActionMap().put("quitKeystroke", quitAction);
+		thisApp.setQuitHandler(new QuitHandler() {
+			@Override
+			public void handleQuitRequestWith(QuitEvent quitEvent, QuitResponse quitResponse) {
+				  boolean proceedWithExit = doQuitAction();
+				  if (proceedWithExit == true) {
+					  System.exit(0);
+				  } else {
+					  quitResponse.cancelQuit();
+				  }
+			}
+		});
 	}
 
 	private void configureFrame(JFrame f) {
@@ -210,9 +215,11 @@ public class Pasty {
 		tp.requestFocus();
 	}
 	
-	public void doExitAction() {
-		System.err.println("EXIT ACTION");
-        int choice = JOptionPane.showOptionDialog(null,
+	/**
+	 * Returns true if the user wants to exit. 
+	 */
+	public boolean doQuitAction() {
+        int choice = JOptionPane.showOptionDialog(f,
 		      "You really want to quit?",
 		      "Quit?",
 		      JOptionPane.YES_NO_OPTION,
@@ -221,7 +228,9 @@ public class Pasty {
 		 
 		  // interpret the user's choice
 		  if (choice == JOptionPane.YES_OPTION) {
-		    System.exit(0);
+		      return true;
+		  } else {
+			  return false;
 		  }
     }
 
