@@ -22,6 +22,12 @@ At the moment, use this script to compile and run the app:
 Just ignore the SBT and _build.sbt_ file, at least for now.
 
 
+Icon
+----
+
+The icon comes from http://commons.wikimedia.org/wiki/File:Nuvola_apps_klipper.png
+
+
 More Information
 ----------------
 

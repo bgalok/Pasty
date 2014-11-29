@@ -40,14 +40,14 @@ public class Pasty {
 		
 	    tp.addKeyListener(new java.awt.event.KeyAdapter() {
 	        public void keyPressed(KeyEvent e) {
-	            tp_keyPressed(e);
+	            tpKeyPressed(e);
 	        }
 	    });
 	    
 	    tp.addCaretListener(new javax.swing.event.CaretListener() {
-	      public void caretUpdate(CaretEvent e) {
-	        rgaEditorPane_caretUpdate(e);
-	      }
+            public void caretUpdate(CaretEvent e) {
+	            tpCaretUpdate(e);
+	        }
 	    });
 
 	    try {
@@ -60,8 +60,7 @@ public class Pasty {
 		}
 	}
 	
-	  private void tp_keyPressed(final KeyEvent e)
-	  {
+	  private void tpKeyPressed(final KeyEvent e) {
 	    // convert TAB (w/ selected text) by shifting all text over three
 	    if ( (e.getKeyCode()==TAB_KEY) && (!e.isShiftDown()) && (tp.getSelectedText()!=null) )
 	    {
@@ -118,8 +117,7 @@ public class Pasty {
 
 	  }
 	  
-	  private void rgaEditorPane_caretUpdate(final CaretEvent e)
-	  {
+	  private void tpCaretUpdate(final CaretEvent e) {
 	    Element root = rgaDocument.getDefaultRootElement();
 	    int dot = e.getDot();
 	    int row = root.getElementIndex( dot );
@@ -129,14 +127,11 @@ public class Pasty {
 	    //updateStatusBar(row+1, col+1);
 	  }
 
-	  private String getTextOfCurrentLine(Element element)
-	  {
-	    try
-	    {
+	  private String getTextOfCurrentLine(Element element) {
+	    try {
 	      return element.getDocument().getText( element.getStartOffset(),(element.getEndOffset()-element.getStartOffset()) );
 	    }
-	    catch (BadLocationException e)
-	    {
+	    catch (BadLocationException e) {
 	      // this is not a great way to do this, but hopefully it doesn't matter
 	      e.printStackTrace();
 	      return "";
@@ -148,11 +143,14 @@ public class Pasty {
 	    tp.repaint();
 	    tp.requestFocus();
 	  }
-
 	  
 	  public static void main(String[] args) {
-		new Pasty();
-	}
+	      SwingUtilities.invokeLater(new Runnable() {
+	          public void run() {
+	              new Pasty();
+	          }
+	      });
+      }
 
 }
 
