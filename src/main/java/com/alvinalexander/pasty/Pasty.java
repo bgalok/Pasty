@@ -32,7 +32,7 @@ public class Pasty {
 	// mac stuff
 	Application thisApp = Application.getApplication();
 			
-	JFrame mainFrame = new JFrame("Pasty");
+	JFrame mainFrame = new JFrame("Scratchpad");
 //	private JTextPane tp;
 //	private Document document;
 	
@@ -73,9 +73,15 @@ public class Pasty {
 
 	// new tab action
 	private Action newTabAction = null;
-	private static final KeyStroke newTabKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_T, Event.META_MASK);
 	private Action renameTabAction = null;
+	private Action closeTabAction = null;
+	private Action nextTabAction = null;
+	private Action previousTabAction = null;
+	private static final KeyStroke newTabKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_T, Event.META_MASK);
 	private static final KeyStroke renameTabKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_R, Event.META_MASK);
+	private static final KeyStroke closeTabKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_W, Event.META_MASK);
+	private static final KeyStroke nextTabKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_N, Event.META_MASK);
+	private static final KeyStroke previousTabKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_P, Event.META_MASK);
 
 	
 	public Pasty() {
@@ -105,6 +111,9 @@ public class Pasty {
 		configureTabsToSpacesAction(aTextPane);
 		configureNewTabAction(aTextPane);
 		configureRenameTabAction(aTextPane);
+		configureCloseTabAction(aTextPane);
+		configureNextTabAction(aTextPane);
+		configurePreviousTabAction(aTextPane);
 	}
 	
 	private JTextPane createNewJTextPane() {
@@ -159,6 +168,24 @@ public class Pasty {
 		textPane.getActionMap().put("renameTabKeystroke", renameTabAction);
 	}
 
+	private void configureCloseTabAction(JTextPane textPane) {
+		closeTabAction = new CloseTabAction(this, textPane, "Close a Tab", closeTabKeystroke.getKeyCode());
+		textPane.getInputMap().put(closeTabKeystroke, "closeTabKeystroke");
+		textPane.getActionMap().put("closeTabKeystroke", closeTabAction);
+	}
+
+	private void configureNextTabAction(JTextPane textPane) {
+		nextTabAction = new NextTabAction(this, "Next Tab", nextTabKeystroke.getKeyCode());
+		textPane.getInputMap().put(nextTabKeystroke, "nextTabKeystroke");
+		textPane.getActionMap().put("nextTabKeystroke", nextTabAction);
+	}
+
+	private void configurePreviousTabAction(JTextPane textPane) {
+		previousTabAction = new PreviousTabAction(this, "Previous Tab", previousTabKeystroke.getKeyCode());
+		textPane.getInputMap().put(previousTabKeystroke, "previousTabKeystroke");
+		textPane.getActionMap().put("previousTabKeystroke", previousTabAction);
+	}
+
 	private void configureUndoRedoActions(JTextPane textPane) {
 		undoAction = new UndoAction();
 		textPane.getInputMap().put(undoKeystroke, "undoKeystroke");
@@ -210,7 +237,7 @@ public class Pasty {
 		thisApp.setQuitHandler(new QuitHandler() {
 			@Override
 			public void handleQuitRequestWith(QuitEvent quitEvent, QuitResponse quitResponse) {
-				  boolean proceedWithExit = doQuitAction();
+				  boolean proceedWithExit = userWantsToProceedWithQuitAction();
 				  if (proceedWithExit == true) {
 					  System.exit(0);
 				  } else {
@@ -240,8 +267,12 @@ public class Pasty {
 	    JMenu tabsMenu = new JMenu("Tabs");
 	    JMenuItem newTabMenuItem = new JMenuItem(newTabAction);
 	    JMenuItem renameTabMenuItem = new JMenuItem(renameTabAction);
+	    JMenuItem nextTabMenuItem = new JMenuItem(nextTabAction);
+	    JMenuItem previousTabMenuItem = new JMenuItem(previousTabAction);
 	    tabsMenu.add(newTabMenuItem);
 	    tabsMenu.add(renameTabMenuItem);
+	    tabsMenu.add(nextTabMenuItem);
+	    tabsMenu.add(previousTabMenuItem);
 
 	    // add the menus to the menubar
 	    menuBar.add(fileMenu);
@@ -370,12 +401,12 @@ public class Pasty {
 	/**
 	 * Returns true if the user wants to exit. 
 	 */
-	public boolean doQuitAction() {
+	public boolean userWantsToProceedWithQuitAction() {
         int choice = JOptionPane.showOptionDialog(mainFrame,
 		      "You really want to quit?",
 		      "Quit?",
 		      JOptionPane.YES_NO_OPTION,
-		      JOptionPane.QUESTION_MESSAGE,
+		      JOptionPane.WARNING_MESSAGE,
 		      null, null, null);
 		 
 		  // interpret the user's choice
@@ -449,6 +480,75 @@ public class Pasty {
 				// do nothing
 			} else {
 				controller.handleRenameTabRequest(tabName, tabIndex);
+			}
+		}
+	}	
+	
+	class NextTabAction extends AbstractAction {
+		Pasty controller;
+		public NextTabAction(final Pasty controller, String name, Integer mnemonic) {
+			super(name, null);
+			putValue(MNEMONIC_KEY, mnemonic);
+			this.controller = controller;
+		}
+		public void actionPerformed(ActionEvent e) {
+			int tabCount = tabPane.getTabCount();
+			if (tabCount == 1) return;
+			int newTabIndex = tabPane.getSelectedIndex() + 1;  // 0-based
+			if (newTabIndex > tabCount-1) {
+				tabPane.setSelectedIndex(0);
+			} else {
+				tabPane.setSelectedIndex(newTabIndex);
+			}
+		}
+	}	
+	
+	class PreviousTabAction extends AbstractAction {
+		Pasty controller;
+		public PreviousTabAction(final Pasty controller, String name, Integer mnemonic) {
+			super(name, null);
+			putValue(MNEMONIC_KEY, mnemonic);
+			this.controller = controller;
+		}
+		public void actionPerformed(ActionEvent e) {
+			int tabCount = tabPane.getTabCount();
+			if (tabCount == 1) return;
+			int newTabIndex = tabPane.getSelectedIndex() - 1;  // 0-based
+			if (newTabIndex < 0) {
+				tabPane.setSelectedIndex(tabCount-1);
+			} else {
+				tabPane.setSelectedIndex(newTabIndex);
+			}
+		}
+	}	
+	
+	class CloseTabAction extends AbstractAction {
+		JTextPane tp;
+		Pasty controller;
+		public CloseTabAction(final Pasty controller, final JTextPane tp, String name, Integer mnemonic) {
+			super(name, null);
+			putValue(MNEMONIC_KEY, mnemonic);
+			this.controller = controller;
+			this.tp = tp;
+		}
+		public void actionPerformed(ActionEvent e) {
+			int tabCount = tabPane.getTabCount();
+			if (tabCount == 1) {
+				if (controller.userWantsToProceedWithQuitAction()) {
+					System.exit(0);
+				}
+			} else {
+				// confirm
+				int choice = JOptionPane.showOptionDialog(null,
+				    "Close this tab?",
+					"Close Tab?",
+					JOptionPane.YES_NO_OPTION,
+					JOptionPane.QUESTION_MESSAGE,
+					null, null, null);
+				if (choice == JOptionPane.YES_OPTION) {
+				    int tabIndex = tabPane.getSelectedIndex();
+				    tabPane.remove(tabIndex);
+				}
 			}
 		}
 	}	
