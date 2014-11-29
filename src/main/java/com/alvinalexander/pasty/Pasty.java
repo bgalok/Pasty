@@ -2,6 +2,8 @@ package com.alvinalexander.pasty;
 
 import javax.swing.*;
 import javax.swing.event.CaretEvent;
+import javax.swing.event.UndoableEditEvent;
+import javax.swing.event.UndoableEditListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 
@@ -11,6 +13,7 @@ import java.awt.Dimension;
 import java.awt.Event;
 import java.awt.Font;
 import java.awt.Insets;
+import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 
 import javax.swing.text.Element;
@@ -19,6 +22,8 @@ import com.apple.eawt.AppEvent.QuitEvent;
 import com.apple.eawt.Application;
 import com.apple.eawt.QuitHandler;
 import com.apple.eawt.QuitResponse;
+
+import javax.swing.undo.*;
 
 public class Pasty {
 
@@ -43,19 +48,65 @@ public class Pasty {
 	private static final KeyStroke largerFontSizeKeystroke2 = KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, Event.META_MASK + Event.SHIFT_MASK);
 	private static final KeyStroke largerFontSizeKeystroke3 = KeyStroke.getKeyStroke(KeyEvent.VK_PLUS, Event.META_MASK);
 
+	// undo/redo
+	protected UndoableEditListener undoHandler = new UndoHandler();
+	protected UndoManager undoManager = new UndoManager();
+	private UndoAction undoAction = null;
+	private RedoAction redoAction = null;
+	private static final KeyStroke undoKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_Z, Event.META_MASK);
+	private static final KeyStroke redoKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_Y, Event.META_MASK);	
+	
 	public Pasty() {
 		configureFrame(f);
 		configureTextArea(scrollPane);
-
-		addKeyListenerToTextArea();
+		
+	    addKeyListenerToTextArea();
 		addCaretListenerToTextArea();
 		configureFontSizeControls();
+	    configureUndoRedoActions();
 		configureQuitHandler();
+		
+		f.setJMenuBar(createMenuBar());
 		
 		f.getContentPane().add(scrollPane, java.awt.BorderLayout.CENTER);
 		makeFrameVisible(f);
 	}
 
+	private void configureUndoRedoActions() {
+		undoAction = new UndoAction();
+	    tp.getInputMap().put(undoKeystroke, "undoKeystroke");
+	    tp.getActionMap().put("undoKeystroke", undoAction);
+
+	    redoAction = new RedoAction();
+	    tp.getInputMap().put(redoKeystroke, "redoKeystroke");
+	    tp.getActionMap().put("redoKeystroke", redoAction);
+	    
+	    document.addUndoableEditListener(undoHandler);
+	}
+
+	  private JMenuBar createMenuBar()
+	  {
+	    // create the menubar
+	    JMenuBar menuBar = new JMenuBar();
+
+	    // File menu
+	    JMenu fileMenu = new JMenu("File");
+
+	    // Edit menu
+	    JMenu editMenu = new JMenu("Edit");
+	    JMenuItem undoMenuItem = new JMenuItem(undoAction);
+	    JMenuItem redoMenuItem = new JMenuItem(redoAction);
+	    editMenu.add(undoMenuItem);
+	    editMenu.add(redoMenuItem);
+
+	    // add the menus to the menubar
+	    menuBar.add(fileMenu);
+	    menuBar.add(editMenu);
+
+	    return menuBar;
+	  }
+	  
+	  
 	// this is mac-specific
 	private void configureQuitHandler() {
 		thisApp.setQuitHandler(new QuitHandler() {
@@ -257,4 +308,109 @@ public class Pasty {
 		});
 	}
 
-}
+	  // /////////// handle undo and redo actions //////////////////
+
+	  class UndoHandler implements UndoableEditListener
+	  {
+
+	    /**
+	     * Messaged when the Document has created an edit, the edit is added to
+	     * <code>undoManager</code>, an instance of UndoManager.
+	     */
+	    public void undoableEditHappened(UndoableEditEvent e)
+	    {
+	      undoManager.addEdit(e.getEdit());
+	      undoAction.update();
+	      redoAction.update();
+	    }
+	  }
+
+	  class UndoAction extends AbstractAction
+	  {
+	    public UndoAction()
+	    {
+	      super("Undo");
+	      setEnabled(false);
+	    }
+
+	    public void actionPerformed(ActionEvent e)
+	    {
+	      try
+	      {
+	        undoManager.undo();
+	      }
+	      catch (CannotUndoException ex)
+	      {
+	        // TODO log this or ignore it
+	        //ex.printStackTrace();
+	      }
+	      update();
+	      redoAction.update();
+	    }
+
+	    protected void update()
+	    {
+	      if (undoManager.canUndo())
+	      {
+	        setEnabled(true);
+	        putValue(Action.NAME, undoManager.getUndoPresentationName());
+	      }
+	      else
+	      {
+	        setEnabled(false);
+	        putValue(Action.NAME, "Undo");
+	      }
+	    }
+	  }
+
+	  class RedoAction extends AbstractAction
+	  {
+	    public RedoAction()
+	    {
+	      super("Redo");
+	      setEnabled(false);
+	    }
+
+	    public void actionPerformed(ActionEvent e)
+	    {
+	      try
+	      {
+	        undoManager.redo();
+	      }
+	      catch (CannotRedoException ex)
+	      {
+	        // TODO log this or ignore it
+	        //ex.printStackTrace();
+	      }
+	      update();
+	      undoAction.update();
+	    }
+
+	    protected void update()
+	    {
+	      if (undoManager.canRedo())
+	      {
+	        setEnabled(true);
+	        putValue(Action.NAME, undoManager.getRedoPresentationName());
+	      }
+	      else
+	      {
+	        setEnabled(false);
+	        putValue(Action.NAME, "Redo");
+	      }
+	    }
+	  }
+	  
+
+} // pasty
+
+
+
+
+
+
+
+
+
+
+
