@@ -15,6 +15,8 @@ import java.awt.Font;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.text.Element;
 
@@ -30,10 +32,19 @@ public class Pasty {
 	// mac stuff
 	Application thisApp = Application.getApplication();
 			
-	JFrame f = new JFrame("Pasty");
-	private JTextPane tp;
-	private Document document;
+	JFrame mainFrame = new JFrame("Pasty");
+//	private JTextPane tp;
+//	private Document document;
+	
+	// "current" things
+	private Document currentDocument;
+	private JScrollPane currentScrollPane;
+	private JTextPane currentTextPane;
+	private List<JTextPane> textPanes = new ArrayList<JTextPane>();
+	private List<JScrollPane> scrollPanes = new ArrayList<JScrollPane>();
+	
 	private final JScrollPane scrollPane = new JScrollPane();
+	private final JTabbedPane tabPane = new JTabbedPane();
 	private static final int TAB_KEY = 9;
 	private static final String TAB_AS_SPACES = "   ";
 	private int currentRow = 0;
@@ -58,45 +69,144 @@ public class Pasty {
 	
 	// tabs to spaces
 	private Action tabsToSpacesAction = null;
-	private static final KeyStroke tabsToSpacesKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_T, Event.META_MASK);
+	private static final KeyStroke tabsToSpacesKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_A, Event.META_MASK);
 
+	// new tab action
+	private Action newTabAction = null;
+	private static final KeyStroke newTabKeystroke = KeyStroke.getKeyStroke(KeyEvent.VK_T, Event.META_MASK);
 	
 	public Pasty() {
-		configureFrame(f);
-		configureTextArea(scrollPane);
+		configureFrame(mainFrame);
 		
-	    addKeyListenerToTextArea();
-		addCaretListenerToTextArea();
-		configureFontSizeControls();
-	    configureUndoRedoActions();
-		configureQuitHandler();
-		configureTabsToSpacesAction();
+		currentTextPane = createNewJTextPane();
+		currentScrollPane = createNewScrollPaneWithEditor(currentTextPane);
+		textPanes.add(currentTextPane);
+		scrollPanes.add(currentScrollPane);
+		tabPane.add(currentScrollPane, "main");
+		
+		//addAllListenersToTextArea(currentTextPane);
 
-	    f.setJMenuBar(createMenuBar());
-		f.getContentPane().add(scrollPane, java.awt.BorderLayout.CENTER);
-		makeFrameVisible(f);
+		// TODO re-enable when going live
+		//configureQuitHandler();
+
+	    mainFrame.setJMenuBar(createMenuBar());
+		mainFrame.getContentPane().add(tabPane, java.awt.BorderLayout.CENTER);
+		makeFrameVisible(mainFrame);
+	}
+	
+	private void addAllListenersToTextPane(JTextPane aTextPane) {
+	    addKeyListenerToTextArea(aTextPane);
+		addCaretListenerToTextArea(aTextPane);
+		configureFontSizeControls(aTextPane);
+	    configureUndoRedoActions(aTextPane);
+		configureTabsToSpacesAction(aTextPane);
+		configureNewTabAction(aTextPane);
+	}
+	
+	private JTextPane createNewJTextPane() {
+		JTextPane aTextPane = new JTextPane();
+		aTextPane.setFont(new Font("Monaco", Font.PLAIN, 13));
+		aTextPane.setMargin(new Insets(20, 20, 20, 20));
+		aTextPane.setBackground(new Color(218, 235, 218));
+		aTextPane.setBackground(new Color(245, 245, 245));
+		aTextPane.setPreferredSize(new Dimension(700, 800));
+		addAllListenersToTextPane(aTextPane);
+		return aTextPane;
+	}
+	
+	void handleNewTabRequest(String tabName) {
+		JTextPane newTextPane = createNewJTextPane();
+		JScrollPane newScrollPane = createNewScrollPaneWithEditor(newTextPane);
+		currentTextPane = newTextPane;
+		currentScrollPane = newScrollPane;
+		textPanes.add(currentTextPane);
+		scrollPanes.add(currentScrollPane);
+		tabPane.add(currentScrollPane, tabName);
+		tabPane.setSelectedComponent(currentScrollPane);
+		currentTextPane.requestFocus();
+	}
+	
+	private JScrollPane createNewScrollPaneWithEditor(JTextPane aTextPane) {
+		JScrollPane aScrollPane = new JScrollPane();
+		aScrollPane.getViewport().add(aTextPane);
+		aScrollPane.getViewport().setPreferredSize(aTextPane.getPreferredSize());
+		return aScrollPane;
 	}
 
-	private void configureTabsToSpacesAction() {
-		tabsToSpacesAction = new TabsToSpacesAction(this, "Tabs -> Spaces", tabsToSpacesKeystroke.getKeyCode());
-	    tp.getInputMap().put(tabsToSpacesKeystroke, "tabsToSpacesKeystroke");
-	    tp.getActionMap().put("tabsToSpacesKeystroke", tabsToSpacesAction);
+	private void configureTabsToSpacesAction(JTextPane textPane) {
+		tabsToSpacesAction = new TabsToSpacesAction(this, textPane, "Tabs -> Spaces", tabsToSpacesKeystroke.getKeyCode());
+		textPane.getInputMap().put(tabsToSpacesKeystroke, "tabsToSpacesKeystroke");
+		textPane.getActionMap().put("tabsToSpacesKeystroke", tabsToSpacesAction);
 	}
 
-	private void configureUndoRedoActions() {
+	private void configureNewTabAction(JTextPane textPane) {
+		newTabAction = new NewTabAction(this, textPane, "New Tab", newTabKeystroke.getKeyCode());
+		textPane.getInputMap().put(newTabKeystroke, "newTabKeystroke");
+		textPane.getActionMap().put("newTabKeystroke", newTabAction);
+	}
+
+	private void configureUndoRedoActions(JTextPane textPane) {
 		undoAction = new UndoAction();
-	    tp.getInputMap().put(undoKeystroke, "undoKeystroke");
-	    tp.getActionMap().put("undoKeystroke", undoAction);
+		textPane.getInputMap().put(undoKeystroke, "undoKeystroke");
+		textPane.getActionMap().put("undoKeystroke", undoAction);
 
 	    redoAction = new RedoAction();
-	    tp.getInputMap().put(redoKeystroke, "redoKeystroke");
-	    tp.getActionMap().put("redoKeystroke", redoAction);
+	    textPane.getInputMap().put(redoKeystroke, "redoKeystroke");
+	    textPane.getActionMap().put("redoKeystroke", redoAction);
 	    
+	    Document document = textPane.getDocument();
 	    document.addUndoableEditListener(undoHandler);
 	}
 
-	  private JMenuBar createMenuBar()
-	  {
+	private void addKeyListenerToTextArea(final JTextPane textPane) {
+		textPane.addKeyListener(new java.awt.event.KeyAdapter() {
+			public void keyPressed(KeyEvent e) {
+				textPaneKeyPressed(e, textPane);
+			}
+		});
+	}
+
+	private void addCaretListenerToTextArea(final JTextPane textPane) {
+		textPane.addCaretListener(new javax.swing.event.CaretListener() {
+			public void caretUpdate(CaretEvent e) {
+				tpCaretUpdate(e, textPane);
+			}
+		});
+	}
+
+	/**
+	 * Let the user (me) increase and decrease the font size.
+	 */
+	private void configureFontSizeControls(JTextPane textPane) {
+		decreaseFontSizeAction = new DecreaseFontSizeAction(this, textPane, "Font--", smallerFontSizeKeystroke.getKeyCode());
+		textPane.getInputMap().put(smallerFontSizeKeystroke,   "smallerFontSizeKeystroke");
+		textPane.getActionMap().put("smallerFontSizeKeystroke", decreaseFontSizeAction);
+
+		increaseFontSizeAction = new IncreaseFontSizeAction(this, textPane, "Font++", largerFontSizeKeystroke1.getKeyCode());
+		textPane.getInputMap().put(largerFontSizeKeystroke1,   "largerFontSizeKeystroke");
+		textPane.getActionMap().put("largerFontSizeKeystroke",  increaseFontSizeAction);
+		textPane.getInputMap().put(largerFontSizeKeystroke2,   "largerFontSizeKeystroke2");
+		textPane.getActionMap().put("largerFontSizeKeystroke2", increaseFontSizeAction);
+		textPane.getInputMap().put(largerFontSizeKeystroke3,   "largerFontSizeKeystroke3");
+		textPane.getActionMap().put("largerFontSizeKeystroke3", increaseFontSizeAction);
+	}
+	  
+	// this is mac-specific
+	private void configureQuitHandler() {
+		thisApp.setQuitHandler(new QuitHandler() {
+			@Override
+			public void handleQuitRequestWith(QuitEvent quitEvent, QuitResponse quitResponse) {
+				  boolean proceedWithExit = doQuitAction();
+				  if (proceedWithExit == true) {
+					  System.exit(0);
+				  } else {
+					  quitResponse.cancelQuit();
+				  }
+			}
+		});
+	}
+
+	private JMenuBar createMenuBar() {
 	    // create the menubar
 	    JMenuBar menuBar = new JMenuBar();
 
@@ -119,22 +229,6 @@ public class Pasty {
 	    return menuBar;
 	  }
 	  
-	  
-	// this is mac-specific
-	private void configureQuitHandler() {
-		thisApp.setQuitHandler(new QuitHandler() {
-			@Override
-			public void handleQuitRequestWith(QuitEvent quitEvent, QuitResponse quitResponse) {
-				  boolean proceedWithExit = doQuitAction();
-				  if (proceedWithExit == true) {
-					  System.exit(0);
-				  } else {
-					  quitResponse.cancelQuit();
-				  }
-			}
-		});
-	}
-
 	private void configureFrame(JFrame f) {
 		//f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		f.getContentPane().setLayout(new BorderLayout());
@@ -146,51 +240,20 @@ public class Pasty {
 		f.setVisible(true);
 	}
 
-	private void configureTextArea(JScrollPane scrollPane) {
-		tp = new JTextPane();
-		tp.setFont(new Font("Monaco", Font.PLAIN, 13));
-		tp.setMargin(new Insets(20, 20, 20, 20));
-		tp.setBackground(new Color(218, 235, 218));
-		tp.setBackground(new Color(245, 245, 245));
-		tp.setPreferredSize(new Dimension(700, 800));
-		scrollPane.getViewport().add(tp);
-		scrollPane.getViewport().setPreferredSize(tp.getPreferredSize());
-		document = tp.getDocument();
-	}
+//	private void configureTextArea(JScrollPane scrollPane) {
+//		tp = new JTextPane();
+//		tp.setFont(new Font("Monaco", Font.PLAIN, 13));
+//		tp.setMargin(new Insets(20, 20, 20, 20));
+//		tp.setBackground(new Color(218, 235, 218));
+//		tp.setBackground(new Color(245, 245, 245));
+//		tp.setPreferredSize(new Dimension(700, 800));
+//		scrollPane.getViewport().add(tp);
+//		scrollPane.getViewport().setPreferredSize(tp.getPreferredSize());
+//		document = tp.getDocument();
+//	}
 
-	private void addKeyListenerToTextArea() {
-		tp.addKeyListener(new java.awt.event.KeyAdapter() {
-			public void keyPressed(KeyEvent e) {
-				tpKeyPressed(e);
-			}
-		});
-	}
 
-	private void addCaretListenerToTextArea() {
-		tp.addCaretListener(new javax.swing.event.CaretListener() {
-			public void caretUpdate(CaretEvent e) {
-				tpCaretUpdate(e);
-			}
-		});
-	}
-
-	/**
-	 * Let the user (me) increase and decrease the font size.
-	 */
-	private void configureFontSizeControls() {
-		decreaseFontSizeAction = new DecreaseFontSizeAction(this, "Font--", smallerFontSizeKeystroke.getKeyCode());
-		tp.getInputMap().put(smallerFontSizeKeystroke,   "smallerFontSizeKeystroke");
-		tp.getActionMap().put("smallerFontSizeKeystroke", decreaseFontSizeAction);
-		increaseFontSizeAction = new IncreaseFontSizeAction(this, "Font++", largerFontSizeKeystroke1.getKeyCode());
-		tp.getInputMap().put(largerFontSizeKeystroke1,   "largerFontSizeKeystroke");
-		tp.getActionMap().put("largerFontSizeKeystroke",  increaseFontSizeAction);
-		tp.getInputMap().put(largerFontSizeKeystroke2,   "largerFontSizeKeystroke2");
-		tp.getActionMap().put("largerFontSizeKeystroke2", increaseFontSizeAction);
-		tp.getInputMap().put(largerFontSizeKeystroke3,   "largerFontSizeKeystroke3");
-		tp.getActionMap().put("largerFontSizeKeystroke3", increaseFontSizeAction);
-	}
-
-	private void tpKeyPressed(final KeyEvent e) {
+	private void textPaneKeyPressed(final KeyEvent e, final JTextPane tp) {
 		// convert TAB (w/ selected text) by shifting all text over three
 		if ((e.getKeyCode() == TAB_KEY) && (!e.isShiftDown())
 				&& (tp.getSelectedText() != null)) {
@@ -199,7 +262,7 @@ public class Pasty {
 			int start = tp.getSelectionStart();
 			int end = tp.getSelectionEnd();
 			int originalLength = end - start;
-			replaceSelectionAndKeepCursor(textAfterTabbing);
+			replaceSelectionAndKeepCursor(textAfterTabbing, tp);
 			e.consume();
 			int newLength = textAfterTabbing.length();
 			tp.select(start, end + newLength - originalLength);
@@ -208,7 +271,7 @@ public class Pasty {
 		else if ((e.getKeyCode() == TAB_KEY) && (!e.isShiftDown())
 				&& (tp.getSelectedText() == null)) {
 			String textAfterTabbing = TAB_AS_SPACES;
-			replaceSelectionAndKeepCursor(textAfterTabbing);
+			replaceSelectionAndKeepCursor(textAfterTabbing, tp);
 			e.consume();
 		}
 		// SHIFT-TAB w/ selected text
@@ -219,7 +282,7 @@ public class Pasty {
 			int start = tp.getSelectionStart();
 			int end = tp.getSelectionEnd();
 			int originalLength = end - start;
-			replaceSelectionAndKeepCursor(textAfterTabbing);
+			replaceSelectionAndKeepCursor(textAfterTabbing, tp);
 			e.consume();
 			int newLength = textAfterTabbing.length();
 			tp.select(start, end + newLength - originalLength);
@@ -231,6 +294,7 @@ public class Pasty {
 		// same as is done for selected text above
 		else if ((e.getKeyCode() == TAB_KEY) && (e.isShiftDown())
 				&& (tp.getSelectedText() == null)) {
+			Document document = tp.getDocument();
 			Element root = document.getDefaultRootElement();
 			Element element = root.getElement(currentRow);
 			int startOffset = element.getStartOffset();
@@ -239,7 +303,7 @@ public class Pasty {
 			String textOfCurrentLine = getTextOfCurrentLine(element);
 			String textAfterRemovingTabs = EditActions
 					.removeTabFromBeginningOfLine(textOfCurrentLine);
-			replaceSelectionAndKeepCursor(textAfterRemovingTabs);
+			replaceSelectionAndKeepCursor(textAfterRemovingTabs, tp);
 			e.consume();
 			// int originalLength = endOffset-startOffset;
 			// int newLength = textAfterRemovingTabs.length();
@@ -252,7 +316,8 @@ public class Pasty {
 
 	}
 
-	private void tpCaretUpdate(final CaretEvent e) {
+	private void tpCaretUpdate(final CaretEvent e, JTextPane tp) {
+		Document document = tp.getDocument();
 		Element root = document.getDefaultRootElement();
 		int dot = e.getDot();
 		int row = root.getElementIndex(dot);
@@ -274,7 +339,7 @@ public class Pasty {
 		}
 	}
 
-	private void replaceSelectionAndKeepCursor(final String newText) {
+	private void replaceSelectionAndKeepCursor(final String newText, final JTextPane tp) {
 		tp.replaceSelection(newText);
 		tp.repaint();
 		tp.requestFocus();
@@ -284,7 +349,7 @@ public class Pasty {
 	 * Returns true if the user wants to exit. 
 	 */
 	public boolean doQuitAction() {
-        int choice = JOptionPane.showOptionDialog(f,
+        int choice = JOptionPane.showOptionDialog(mainFrame,
 		      "You really want to quit?",
 		      "Quit?",
 		      JOptionPane.YES_NO_OPTION,
@@ -302,13 +367,13 @@ public class Pasty {
 	/**
 	 * Reduce the size of the font in the editor area.
 	 */
-	public void decreaseFontSizeAction() {
+	public void decreaseFontSizeAction(final JTextPane tp) {
 		Font f = tp.getFont();
 		Font f2 = new Font(f.getFontName(), f.getStyle(), f.getSize() - 1);
 		tp.setFont(f2);
 	}
 
-	public void increaseFontSizeAction() {
+	public void increaseFontSizeAction(final JTextPane tp) {
 		Font f = tp.getFont();
 		Font f2 = new Font(f.getFontName(), f.getStyle(), f.getSize() + 1);
 		tp.setFont(f2);
@@ -326,11 +391,39 @@ public class Pasty {
 	/**
 	 * Convert tabs to spaces
 	 */
-	public class TabsToSpacesAction extends AbstractAction
+	class NewTabAction extends AbstractAction
 	{
-		public TabsToSpacesAction(Pasty controller, String name, Integer mnemonic) {
+		JTextPane tp;
+		Pasty controller;
+		public NewTabAction(final Pasty controller, final JTextPane tp, String name, Integer mnemonic) {
 			super(name, null);
 			putValue(MNEMONIC_KEY, mnemonic);
+			this.controller = controller;
+			this.tp = tp;
+		}
+		public void actionPerformed(ActionEvent e)
+		{
+			// show a dialog requesting a tab name
+			String tabName = JOptionPane.showInputDialog(mainFrame, "Name for the new tab:");
+			if (tabName == null && tabName.trim().equals("")) {
+				// do nothing
+			} else {
+				controller.handleNewTabRequest(tabName);
+			}
+		}
+	}	
+	
+	
+	/**
+	 * Convert tabs to spaces
+	 */
+	public class TabsToSpacesAction extends AbstractAction
+	{
+		JTextPane tp;
+		public TabsToSpacesAction(final Pasty controller, final JTextPane tp, String name, Integer mnemonic) {
+			super(name, null);
+			putValue(MNEMONIC_KEY, mnemonic);
+			this.tp = tp;
 		}
 		public void actionPerformed(ActionEvent e)
 		{
