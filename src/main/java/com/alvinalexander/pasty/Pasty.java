@@ -2,6 +2,7 @@ package com.alvinalexander.pasty;
 
 import javax.swing.*;
 import javax.swing.event.CaretEvent;
+import javax.swing.event.DocumentEvent;
 import javax.swing.event.UndoableEditEvent;
 import javax.swing.event.UndoableEditListener;
 import javax.swing.text.BadLocationException;
@@ -14,9 +15,9 @@ import java.awt.Event;
 import java.awt.Font;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
+import java.awt.event.ComponentEvent;
 import java.awt.event.KeyEvent;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.prefs.*;
 
 import javax.swing.text.Element;
 
@@ -31,7 +32,17 @@ public class Pasty {
 
 	// mac stuff
 	Application thisApp = Application.getApplication();
-			
+	
+	// prefs
+	private Preferences prefs = Preferences.userNodeForPackage(this.getClass());
+	private static final String HEIGHT  = "HEIGHT";
+	private static final String WIDTH   = "WIDTH";
+	private static final String LAST_X0 = "LAST_X0";
+	private static final String LAST_Y0 = "LAST_Y0";
+	
+	// state
+	boolean isDirty = false;
+	
 	JFrame mainFrame = new JFrame("Scratchpad");
 	
 	private final JTabbedPane tabPane = new JTabbedPane();
@@ -99,6 +110,31 @@ public class Pasty {
 		configureCloseTabAction(aTextPane);
 		configureNextTabAction(aTextPane);
 		configurePreviousTabAction(aTextPane);
+		configureDocumentListener(aTextPane);
+	}
+
+	/**
+	 * this is a little wrong, since there can/will be multiple documents.
+	 * but all i care about is when the document gets "dirty".
+	 * as long as isDirty=false, i can quit without the warning dialog.
+	 */
+	private void configureDocumentListener(JTextPane aTextPane) {
+		final Document doc = aTextPane.getDocument();
+	    doc.addDocumentListener(new javax.swing.event.DocumentListener() {
+	      public void insertUpdate(DocumentEvent e) {
+	    	  handleDocumentWasModifiedEvent();
+	      }
+	      public void removeUpdate(DocumentEvent e) {
+	    	  handleDocumentWasModifiedEvent();
+	      }
+	      public void changedUpdate(DocumentEvent e) {
+	    	  handleDocumentWasModifiedEvent();
+	      }
+	    });
+	}
+	
+	void handleDocumentWasModifiedEvent() {
+		isDirty = true;
 	}
 	
 	private JTextPane createNewJTextPane() {
@@ -218,6 +254,7 @@ public class Pasty {
 		thisApp.setQuitHandler(new QuitHandler() {
 			@Override
 			public void handleQuitRequestWith(QuitEvent quitEvent, QuitResponse quitResponse) {
+				  if (!isDirty) System.exit(0);
 				  boolean proceedWithExit = userWantsToProceedWithQuitAction();
 				  if (proceedWithExit == true) {
 					  System.exit(0);
@@ -264,28 +301,37 @@ public class Pasty {
 	  }
 	  
 	private void configureFrame(JFrame f) {
-		//f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		f.getContentPane().setLayout(new BorderLayout());
+		int lastHeight = prefs.getInt(HEIGHT, 600);
+		int lastWidth = prefs.getInt(WIDTH, 500);
+		int lastX0 = prefs.getInt(LAST_X0, 0);
+		int lastY0 = prefs.getInt(LAST_Y0, 0);
+		f.setPreferredSize(new Dimension(lastWidth, lastHeight));
+		f.setLocation(lastX0, lastY0);
+		f.addComponentListener(new MainFrameComponentAdapter(this));
+	}
+
+	private void updateDimensions() {
+		prefs.putInt(LAST_X0, mainFrame.getX());
+		prefs.putInt(LAST_Y0, mainFrame.getY());
+		prefs.putInt(HEIGHT, mainFrame.getHeight());
+		prefs.putInt(WIDTH, mainFrame.getWidth());
+	}
+
+	// MainFrameComponentAdapter method
+	void mainFrameMoved(ComponentEvent e) {
+		updateDimensions();
+	}
+
+	// MainFrameComponentAdapter method
+	void mainFrameResized(ComponentEvent e) {
+		updateDimensions();
 	}
 
 	private void makeFrameVisible(JFrame f) {
 		f.pack();
-		f.setLocationRelativeTo(null);
 		f.setVisible(true);
 	}
-
-//	private void configureTextArea(JScrollPane scrollPane) {
-//		tp = new JTextPane();
-//		tp.setFont(new Font("Monaco", Font.PLAIN, 13));
-//		tp.setMargin(new Insets(20, 20, 20, 20));
-//		tp.setBackground(new Color(218, 235, 218));
-//		tp.setBackground(new Color(245, 245, 245));
-//		tp.setPreferredSize(new Dimension(700, 800));
-//		scrollPane.getViewport().add(tp);
-//		scrollPane.getViewport().setPreferredSize(tp.getPreferredSize());
-//		document = tp.getDocument();
-//	}
-
 
 	private void textPaneKeyPressed(final KeyEvent e, final JTextPane tp) {
 		// convert TAB (w/ selected text) by shifting all text over three
@@ -427,6 +473,19 @@ public class Pasty {
 		});
 	}
 	
+	class MainFrameComponentAdapter extends java.awt.event.ComponentAdapter {
+		  Pasty adaptee;
+
+		  MainFrameComponentAdapter(Pasty adaptee) {
+		    this.adaptee = adaptee;
+		  }
+		  public void componentMoved(ComponentEvent e) {
+		    adaptee.mainFrameMoved(e);
+		  }
+		  public void componentResized(ComponentEvent e) {
+		    adaptee.mainFrameResized(e);
+		  }
+    }
 	
 	class NewTabAction extends AbstractAction {
 		JTextPane tp;
@@ -518,6 +577,7 @@ public class Pasty {
 			this.controller = controller;
 			this.tp = tp;
 		}
+		// TODO i don't like having two ways of exiting the app
 		public void actionPerformed(ActionEvent e) {
 			int tabCount = tabPane.getTabCount();
 			if (tabCount == 1) {
