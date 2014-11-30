@@ -4,5 +4,5 @@
 sed -i '' '/\/dict/i \
 <key>NSHighResolutionCapable</key> \
 <true/>
-' deploy/release/Scratchpad.app/Contents/Info.plist
+' deploy/release/Pasty.app/Contents/Info.plist
 

@@ -43,7 +43,7 @@ public class Pasty {
 	// state
 	boolean isDirty = false;
 	
-	JFrame mainFrame = new JFrame("Scratchpad");
+	JFrame mainFrame = new JFrame("Pasty");
 	
 	private final JTabbedPane tabPane = new JTabbedPane();
 	private static final int TAB_KEY = 9;
